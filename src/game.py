@@ -19,8 +19,10 @@ class Game:
         color = COLOR_INACTIVE
         active = True
         text = ''
-        input_box = pygame.Rect(375, 215, 300, 50) 
-        submit_button = pygame.Rect(450, 315, 153, 45)
+        input_box_width = 300
+        offset_x = 125  # PARA MOVER PARA A DIREITA, AJUSTAR ESSA VARIÁVEL (FOI O QUE EU CONSEGUIR)
+        input_box = pygame.Rect((self.width - input_box_width) // 2 + offset_x, 215, input_box_width, 50)
+        submit_button = pygame.Rect((self.width - 153) // 2 + offset_x, 315, 153, 45)
 
         while self.running:
             self.screen.blit(bg_image, (0, 0))
@@ -45,21 +47,23 @@ class Game:
                         else:
                             text += event.unicode
 
-            self.draw_text(self.screen, "Olá, seja bem vindo(a):", self.font, WHITE, (400, 75))
-            self.draw_text(self.screen, "Digite seu nome:", self.font, WHITE, (435, 125))
+            self.draw_text(self.screen, "Olá, seja bem vindo(a):", self.font, WHITE, ((self.width - self.font.size("Olá, seja bem vindo(a):")[0]) // 2 + offset_x, 75))
+            self.draw_text(self.screen, "Digite seu nome:", self.font, WHITE, ((self.width - self.font.size("Digite seu nome:")[0]) // 2 + offset_x, 125))
             
             pygame.draw.rect(self.screen, color, input_box, 3)
             
             txt_surface = self.font.render(text, True, color)
             self.screen.blit(txt_surface, (input_box.x+5, input_box.y+5))
             
-            # input_box.w = max(450, txt_surface.get_width()+10)
+            input_box.w = max(300, txt_surface.get_width()+10)
+            input_box.x = (self.width - input_box.w) // 2 + offset_x  # Ensure the input box stays centered
 
             pygame.draw.rect(self.screen, GRAY, submit_button)
             self.draw_text(self.screen, "Continuar", self.font, BLACK, (submit_button.x + 15, submit_button.y + 10))
 
             pygame.display.flip()
             self.clock.tick(30)
+
 
     def try_exit(self, event):
         if event.type == pygame.QUIT:
