@@ -1,5 +1,9 @@
+import os
 import pygame
+import pandas as pd 
+from datetime import datetime
 from typing import Dict, Tuple
+
 
 def concat_dicts(*args) -> Dict:
     """
@@ -19,11 +23,11 @@ def concat_dicts(*args) -> Dict:
             raise ValueError("Todos os argumentos devem ser dicionários.")
     return result
 
+
 def mostrar_parabens(screen, font, screen_width, screen_height, n_fase, resto_do_texto):
     # Variáveis de configuração
     parabens_text_y = 175  # Altura do texto "Parabéns"
     button_y_position = screen_height // 2  # Altura do botão na tela
-    bg_color_text_parabens = (0, 0, 0)  # Cor de fundo do texto "Parabéns"
     button_bg_color = (0, 200, 0)  # Cor do botão de reset (um verde claro)
     bg_color_rect_parabens = (0, 0, 0)  # Cor de fundo do retângulo do "Parabéns"
     padding_horizontal = 100  # Padding horizontal
@@ -66,6 +70,7 @@ def mostrar_parabens(screen, font, screen_width, screen_height, n_fase, resto_do
     
     return reset_button
 
+
 def draw_text_with_background(surface, text, font, text_color, bg_color, pos, screen_width):
     text_surface = font.render(text, True, text_color)
     text_rect = text_surface.get_rect(center=pos)
@@ -91,11 +96,11 @@ def desenha_texto(screen, font, coords, concluido: bool, fase_atual: int):
         coords (tuple): Coordenadas ((top_left_x, top_left_y), (bottom_right_x, bottom_right_y)).
         texto (str): O texto a ser desenhado.
     """
-    texto = "Fase concluída" if concluido else f"Fase atual: {fase_atual}"
+    texto = "Fases concluídas" if concluido else f"Fase atual: {fase_atual} de 3"
     rgb_concluido = (0, 255, 00) if concluido else (255, 0, 0) 
     
     
-    padding_horizontal = 175
+    padding_horizontal = 130
     
     top_left, bottom_right = coords
     text_width, text_height = font.size(texto)
@@ -111,3 +116,42 @@ def desenha_texto(screen, font, coords, concluido: bool, fase_atual: int):
     # Desenhar o texto
     text_surface = font.render(texto, True, (255, 255, 255))  # Branco
     screen.blit(text_surface, (text_x, text_y))
+
+
+def other_draw_text_with_background(surface, text, font, text_color, bg_color, pos, screen_width=None, is_middle=False):
+    text_surface = font.render(text, True, text_color)
+    text_rect = text_surface.get_rect(topleft=pos)
+    
+    if is_middle and screen_width:
+        text_rect.x = (screen_width - text_rect.width) // 2
+    
+    bg_rect = pygame.Rect(text_rect.x - 10, text_rect.y - 5, text_rect.width + 20, text_rect.height + 10)  # Ajuste o padding conforme necessário
+    bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
+    bg_surface.set_alpha(128)  # Define a transparência
+    bg_surface.fill(bg_color)  # Preenche com a cor de fundo
+    surface.blit(bg_surface, bg_rect.topleft)
+    surface.blit(text_surface, text_rect.topleft)
+
+
+def calcular_media_coluna_df(df: pd.DataFrame, col_name: str) -> float:
+    if df[col_name].empty:
+        return 0
+    return df[col_name].mean()
+
+
+def salvar_data_frames(
+    df_tentativas: pd.DataFrame,
+    df_tempos: pd.DataFrame,
+    player_name: str,
+    caminho_pasta_turma: str,
+    data:str = datetime.now().strftime("%Y.%m.%d")
+    ) -> None:
+    
+    if not os.path.exists(os.path.join(caminho_pasta_turma, data)):
+        os.makedirs(os.path.join(caminho_pasta_turma, data))
+    
+    nome_arquivo = os.path.join(caminho_pasta_turma, data, rf'{player_name}.xlsx')
+    
+    with pd.ExcelWriter(nome_arquivo) as writer:
+        df_tentativas.to_excel(writer, sheet_name='Pirâmide', index=False)
+        df_tempos.to_excel(writer, sheet_name='Alimente o bicho', index=False)

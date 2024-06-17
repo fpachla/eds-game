@@ -7,6 +7,7 @@ import pandas as pd
 from libs.utils import *
 from src.constants import *
 from libs.manip_imgs import *
+from libs.manip_videos import *
 
 class Game:
     def __init__(self) -> None:
@@ -17,18 +18,23 @@ class Game:
         self.font_parabens = pygame.font.Font(None, 45)
         self.running = True
         self.clock = pygame.time.Clock()
-        self.current_screen = 'menu_inicial'  # Initial screen is 'login'
-        self.player_name = 'Pachla'  # Variable to store the player's name
-        self.fase_um_nivel = 3
+        self.current_screen = 'fase_dois'
+        self.player_name = 'Pachla'
+        self.fase_um_nivel = 1
         self.fase_um_concluido = False
         self.fase_dois_nivel = 1
+        self.caminho_pasta_turma = rf"C:\Users\{USER}\Documents\Pasta compartilhas - Turma"
         self.fase_dois_concluido = False
         self.parabens_text_height = 150  # Variável para controlar a altura do texto "Parabéns"
         self.proximity_threshold = 15  # Variável para controlar a proximidade necessária para encaixar
         self.parabens_bg_color = BLACK  # Variável para controlar a cor do retângulo de fundo
+        self.tentando_entrar_na_fase = None
         self.times_df = pd.DataFrame(columns=['nome_da_fase', 'tempo'])  # DataFrame para armazenar os tempos das fases
+        self.tentativas_df = pd.DataFrame(columns=['nome_da_fase', 'tentativas'])  # DataFrame para o número de tentativas das fases
         self.start_time = None  # Variável para armazenar o tempo de início da fase
+        self.video_link = "https://youtu.be/dyIHYKt0dMU"
 
+        
         self.dict_tipo_da_fase = {
             1 : "Terrestre",
             2 : "Aquatico",
@@ -46,6 +52,38 @@ class Game:
                 self.fase_um_piramide()
             elif self.current_screen == 'fase_dois':
                 self.fase_dois_alimente_o_bicho()
+            elif self.current_screen == 'video_explicativo':
+                self.video_explicativo()
+    
+    
+    def video_explicativo(self):
+        bg_image = pygame.image.load(r'imgs/background-video-explicativo.jpg')
+        bg_image = pygame.transform.scale(bg_image, (self.width, self.height))
+        
+        quadrado_sim = ((258, 358), (356, 416))  
+        quadrado_nao = ((391, 360), (485, 418))
+        
+        while self.running and self.current_screen == 'video_explicativo':
+            for event in pygame.event.get():
+                self.try_exit(event)
+                
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    # print(mouse_pos)
+                    
+                    if (quadrado_sim[0][0] <= mouse_pos[0] <= quadrado_sim[1][0] and
+                        quadrado_sim[0][1] <= mouse_pos[1] <= quadrado_sim[1][1]):
+                        video_explicativo(self.video_link)
+                        self.current_screen = self.tentando_entrar_na_fase
+                                
+                    elif (quadrado_nao[0][0] <= mouse_pos[0] <= quadrado_nao[1][0] and
+                        quadrado_nao[0][1] <= mouse_pos[1] <= quadrado_nao[1][1]):
+                            self.current_screen = self.tentando_entrar_na_fase
+            
+            self.screen.blit(bg_image, (0, 0))
+            pygame.display.update()
+            pygame.display.flip()
+            self.clock.tick(30)
 
 
     def check_all_images_locked(self, locked_images, total_images):
@@ -79,9 +117,9 @@ class Game:
                     # Se o usuário clicar no botão de continuar
                     if submit_button.collidepoint(event.pos):
                         self.player_name = text
-                        print(f'nome coletado: {self.player_name}')
+                        # print(f'nome coletado: {self.player_name}')
                         self.current_screen = 'menu_inicial'
-                        print("Mudando de tela")
+                        # print("Mudando de tela")
                 elif event.type == pygame.KEYDOWN:
                     if active:
                         if event.key == pygame.K_BACKSPACE:
@@ -114,6 +152,7 @@ class Game:
         quadrado_fase_1_coords = ((17, 239), (345, 426))  
         quadrado_fase_2_coords = ((404, 240), (732, 424))
         
+        
 
         while self.running and self.current_screen == 'menu_inicial':
             self.screen.blit(bg_image, (0, 0))
@@ -122,14 +161,16 @@ class Game:
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_pos = pygame.mouse.get_pos()
-                    print(mouse_pos)
+                    # print(mouse_pos)
                     if (quadrado_fase_1_coords[0][0] <= mouse_pos[0] <= quadrado_fase_1_coords[1][0] and
                         quadrado_fase_1_coords[0][1] <= mouse_pos[1] <= quadrado_fase_1_coords[1][1]):
-                        self.current_screen = 'fase_um'
+                        self.current_screen = 'video_explicativo'
+                        self.tentando_entrar_na_fase = 'fase_um'
                         
                     elif (quadrado_fase_2_coords[0][0] <= mouse_pos[0] <= quadrado_fase_2_coords[1][0] and
                         quadrado_fase_2_coords[0][1] <= mouse_pos[1] <= quadrado_fase_2_coords[1][1]):
-                        self.current_screen = 'fase_dois'
+                        self.current_screen = 'video_explicativo'
+                        self.tentando_entrar_na_fase = 'fase_dois'
 
             welcome_message = f"Muito bem vindo(a), {self.player_name}!"
             text_width, text_height = self.font.size(welcome_message)
@@ -148,10 +189,21 @@ class Game:
             desenha_texto(self.screen, self.font, quadrado_fase_1_coords, self.fase_um_concluido, self.fase_um_nivel)
             desenha_texto(self.screen, self.font, quadrado_fase_2_coords, self.fase_dois_concluido, self.fase_dois_nivel)
 
+            # Desenha: Escolha uma fase
+            other_draw_text_with_background(self.screen, "Escolha um jogo", self.font, WHITE, BLACK, (17, 75), WIN_WIDHT, True)
+            
+            
+            # Médias das fases
+            media_fase_um = calcular_media_coluna_df(self.times_df, 'tempo')
+            media_fase_dois = calcular_media_coluna_df(self.tentativas_df, 'tentativas')
+            
+            other_draw_text_with_background(self.screen, rf"Média: {media_fase_um:.0f} segundos", self.font, WHITE, BLACK, (70, 165))
+            other_draw_text_with_background(self.screen, rf"Média: {media_fase_dois:.0f} tentativas", self.font, WHITE, BLACK, (455, 165))
+            
+
             pygame.display.flip()
             self.clock.tick(30)
 
-            
             
     def fase_um_piramide(self):
         if self.fase_um_nivel == 1:
@@ -206,12 +258,22 @@ class Game:
 
         self.start_time = pygame.time.get_ticks()  # Inicializar o cronômetro
         cronometro_parado = False  # Variável para controlar se o cronômetro foi parado
+        tempo_pausado = 0
+        pausado = False
 
         while self.running and self.current_screen == 'fase_um':
             self.screen.blit(bg_image, (0, 0))
 
             for event in pygame.event.get():
                 self.try_exit(event)
+
+                if event.type == pygame.ACTIVEEVENT:
+                    if event.gain == 0:  # Jogo perdeu o foco
+                        pausado = True
+                        tempo_pausado = pygame.time.get_ticks()
+                    elif event.gain == 1 and pausado:  # Jogo ganhou o foco
+                        pausado = False
+                        self.start_time += pygame.time.get_ticks() - tempo_pausado
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_pos = pygame.mouse.get_pos()
@@ -223,14 +285,12 @@ class Game:
                     if self.check_all_images_locked(locked_images, len(img_paths)):
                         if reset_button.collidepoint(mouse_pos):
                             if self.fase_um_nivel == 3:
-                                print(self.times_df)  # Imprimir o DataFrame quando todas as fases forem concluídas
                                 self.current_screen = 'menu_inicial'
                                 self.fase_um_nivel = 1
                                 self.fase_um_concluido = True
                                 return
                             else:
                                 self.fase_um_nivel += 1
-                                print(f"Nível atual: {self.fase_um_nivel}")
                                 self.fase_um_piramide()
                                 return
                     else:
@@ -296,29 +356,153 @@ class Game:
                 timer_text = self.font.render(f"{elapsed_time:.0f} segundos", True, (255, 255, 255))
                 self.screen.blit(timer_text, (50, 15))  # Ajustar a posição do texto do cronômetro
 
-            
-            
             pygame.display.flip()
             self.clock.tick(30)
-        
+
         
     def fase_dois_alimente_o_bicho(self) -> None:
-        bg_image = pygame.image.load(rf'imgs\background-fase-um.jpg')
+        bg_image = pygame.image.load(rf'imgs/background-fase-dois.jpg')
         bg_image = pygame.transform.scale(bg_image, (self.width, self.height))
+        
+        dict_coordenadas = {
+            'animal-principal': (325, 93),
+            'caixa-um': (96, 322),
+            'caixa-dois': (337, 322),
+            'caixa-tres': (568, 322)
+        }
+        
+        dict_fases = {
+            1 : {
+                'animal-principal' : 'imgs/tubarao.png',
+                'escolha-correta' : 'imgs/peixe.png',
+                'caixa-errada-um' : 'imgs/grilo.png',
+                'caixa-errada-dois' : 'imgs/grama.png',
+            },
+            2 : {
+                'animal-principal' : 'imgs/leao.png',
+                'escolha-correta' : 'imgs/cervo.png',
+                'caixa-errada-um' : 'imgs/galho.png',
+                'caixa-errada-dois' : 'imgs/borboleta.png',
+            },
+            3 : {
+                'animal-principal' : 'imgs/aguia.png',
+                'escolha-correta' : 'imgs/coelho.png',
+                'caixa-errada-um' : 'imgs/camarao.png',
+                'caixa-errada-dois' : 'imgs/pinguim.png',
+            }
+        }
+        
+        fase_atual = dict_fases[self.fase_dois_nivel]
+        nome_animal_principal = fase_atual['animal-principal'].split("/")[-1].split(".")[0].upper()
+        
+        animal_principal_image = pygame.image.load(fase_atual['animal-principal'])
+        animal_principal_image = pygame.transform.scale(animal_principal_image, (100, 100))
+        
+        escolha_correta_image = pygame.image.load(fase_atual['escolha-correta'])
+        escolha_correta_image = pygame.transform.scale(escolha_correta_image, (80, 80))
+        
+        caixa_errada_um_image = pygame.image.load(fase_atual['caixa-errada-um'])
+        caixa_errada_um_image = pygame.transform.scale(caixa_errada_um_image, (80, 80))
+        
+        caixa_errada_dois_image = pygame.image.load(fase_atual['caixa-errada-dois'])
+        caixa_errada_dois_image = pygame.transform.scale(caixa_errada_dois_image, (80, 80))
+        
+        reset_button = pygame.Rect(self.width // 2 - 75, self.height // 2 + 50, 150, 50)
+        
+        # Configurações do botão de voltar ao menu
+        sair_esquerdo_top_left = (592, 14)  # Coordenadas do canto superior esquerdo
+        sair_esquerdo_bottom_right = (736, 56)  # Coordenadas do canto inferior direito
+        
+        escolha_clicada = False
+        tentativa = 1  # Contador de tentativas
 
+        # Coordenadas disponíveis para as opções
+        coordenadas_opcoes = [
+            dict_coordenadas['caixa-um'],
+            dict_coordenadas['caixa-dois'],
+            dict_coordenadas['caixa-tres']
+        ]
+        
+        random.shuffle(coordenadas_opcoes)
+        
         while self.running and self.current_screen == 'fase_dois':
-            print("aaa")
             self.screen.blit(bg_image, (0, 0))
+            self.screen.blit(animal_principal_image, dict_coordenadas['animal-principal'])
+            self.screen.blit(escolha_correta_image, coordenadas_opcoes[0])
+            if caixa_errada_um_image:
+                self.screen.blit(caixa_errada_um_image, coordenadas_opcoes[1])
+            if caixa_errada_dois_image:
+                self.screen.blit(caixa_errada_dois_image, coordenadas_opcoes[2])
+            
+            # Desenhar retângulo semitransparente atrás do texto "Tentativas"
+            tentativas_text = f"Tentativas: {tentativa}"
+            other_draw_text_with_background(self.screen, tentativas_text, self.font, WHITE, BLACK, (20, 15))
+            
             for event in pygame.event.get():
                 self.try_exit(event)
-     
-     
+                
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    if (sair_esquerdo_top_left[0] <= mouse_pos[0] <= sair_esquerdo_bottom_right[0] and
+                        sair_esquerdo_top_left[1] <= mouse_pos[1] <= sair_esquerdo_bottom_right[1]):
+                        self.current_screen = 'menu_inicial'
+                    
+                    escolha_correta_rect = pygame.Rect(coordenadas_opcoes[0][0], coordenadas_opcoes[0][1], escolha_correta_image.get_width(), escolha_correta_image.get_height())
+                    
+                    if escolha_correta_rect.collidepoint(mouse_pos):
+                        escolha_clicada = True
+                        new_row = pd.DataFrame({'nome_da_fase': [f'Jogo 2 - nível {self.dict_tipo_da_fase[self.fase_dois_nivel]}'], 'tentativas': [tentativa]})
+                        self.tentativas_df = pd.concat([self.tentativas_df, new_row], ignore_index=True)
+                    
+                    if caixa_errada_um_image:
+                        caixa_errada_um_rect = pygame.Rect(coordenadas_opcoes[1][0], coordenadas_opcoes[1][1], caixa_errada_um_image.get_width(), caixa_errada_um_image.get_height())
+                        if caixa_errada_um_rect.collidepoint(mouse_pos):
+                            caixa_errada_um_image = None
+                            tentativa += 1
+                    
+                    if caixa_errada_dois_image:
+                        caixa_errada_dois_rect = pygame.Rect(coordenadas_opcoes[2][0], coordenadas_opcoes[2][1], caixa_errada_dois_image.get_width(), caixa_errada_dois_image.get_height())
+                        if caixa_errada_dois_rect.collidepoint(mouse_pos):
+                            caixa_errada_dois_image = None
+                            tentativa += 1
+                    
+                    if escolha_clicada and reset_button.collidepoint(mouse_pos):
+                        if self.fase_dois_nivel == 3:
+                            self.current_screen = 'menu_inicial'
+                            self.fase_dois_nivel = 1
+                            self.fase_dois_concluido = True
+                            return
+                        else:
+                            self.fase_dois_nivel += 1
+                            self.fase_dois_alimente_o_bicho()
+                            return
+                        
+            temp_text = rf"O que o {nome_animal_principal} come?"
+            other_draw_text_with_background(self.screen, rf"{temp_text}", self.font, WHITE, BLACK, (17, 240), WIN_WIDHT, True)
+            
+            if escolha_clicada:
+                reset_button = mostrar_parabens(self.screen, self.font_parabens, WIN_WIDHT, WIN_HEIGHT, n_fase=self.fase_dois_nivel, resto_do_texto=rf" Tentativas: {tentativa}")
+            
+            
+            pygame.display.update()
+            pygame.display.flip()
+            self.clock.tick(30)
+  
+            
     def try_exit(self, event):
         if event.type == pygame.QUIT:
+            salvar_data_frames(
+                df_tentativas=self.tentativas_df,
+                df_tempos= self.times_df,
+                player_name= self.player_name,
+                caminho_pasta_turma= self.caminho_pasta_turma,
+            )
+            
             self.running = False
+            
             pygame.quit()
             sys.exit()
-
+            
 
     def draw_text(self, surface, text, font, color, pos):
         text_surface = font.render(text, True, color)
